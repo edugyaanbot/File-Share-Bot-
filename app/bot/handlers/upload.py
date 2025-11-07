@@ -1,8 +1,7 @@
 from aiogram import Router, F, Bot
-from aiogram.types import Message, ContentType
+from aiogram.types import Message, ContentType, InlineKeyboardMarkup, InlineKeyboardButton
 from app.services.files import create_file_record
 from app.services.qr import generate_qr_code
-from app.bot.keyboards.main_menu import get_file_link_keyboard
 from app.config import settings
 import logging
 
@@ -41,8 +40,8 @@ async def handle_file_upload(message: Message, bot: Bot):
     # Show processing message
     status_msg = await message.answer("⏳ Processing your file...")
     
-    # Copy to storage channel (not forward)
     try:
+        # Copy to storage channel
         copied = await bot.copy_message(
             chat_id=settings.STORAGE_CHANNEL_ID,
             from_chat_id=message.chat.id,
@@ -66,29 +65,48 @@ async def handle_file_upload(message: Message, bot: Bot):
         uuid = file_doc["uuid"]
         deep_link = f"https://t.me/{settings.BOT_USERNAME}?start={uuid}"
         
-        # Generate QR code (returns BufferedInputFile)
-        qr_file = await generate_qr_code(uuid)
+        # Delete processing message
+        await status_msg.delete()
         
-        # Update status message with success and link
-        await status_msg.edit_text(
-            f"✅ <b>Stored Successfully!</b>\n\n"
-            f"📎 Share this link:\n<code>{deep_link}</code>",
-            reply_markup=get_file_link_keyboard(deep_link)
+        # Format: exactly like your reference
+        # Line 1: ✅ Stored!🔐
+        # Line 2: (empty)
+        # Line 3: Link : [clickable url with spoiler]
+        # Line 4: (empty)
+        # Line 5: FILE_UUID: [monospace uuid]
+        
+        success_text = (
+            "✅ <b>Stored!</b>🔐\n\n"
+            f"<b>Link :</b> <span class='tg-spoiler'>{deep_link}</span>\n\n"
+            f"<b>FILE_UUID:</b> <code>{uuid}</code>"
         )
         
-        # Send QR with spoiler effect
+        # Share File button at bottom
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🔗 Share File", url=deep_link)]
+        ])
+        
+        await message.answer(
+            success_text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+        # Send QR code with spoiler
+        qr_file = await generate_qr_code(uuid)
         await bot.send_photo(
             chat_id=message.chat.id,
             photo=qr_file,
             caption="📱 <b>Scan QR to retrieve file</b>\n<i>(tap to reveal)</i>",
             has_spoiler=True,
-            disable_notification=True
+            disable_notification=True,
+            parse_mode="HTML"
         )
         
-        logger.info(f"File {uuid} uploaded by user {user_id}")
+        logger.info(f"✅ File {uuid} uploaded by user {user_id}")
         
     except Exception as e:
-        logger.error(f"Error storing file: {e}", exc_info=True)
+        logger.error(f"❌ Error storing file: {e}", exc_info=True)
         try:
             await status_msg.edit_text("❌ Error storing file. Please try again.")
         except:
@@ -100,7 +118,7 @@ def extract_file_info(message: Message):
     if message.document:
         return "document", message.document
     elif message.photo:
-        return "photo", message.photo[-1]  # Largest photo
+        return "photo", message.photo[-1]
     elif message.video:
         return "video", message.video
     elif message.audio:
