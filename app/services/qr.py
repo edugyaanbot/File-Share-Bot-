@@ -1,6 +1,7 @@
 import qrcode
 from io import BytesIO
 from PIL import Image
+from aiogram.types import BufferedInputFile
 from app.config import settings
 from app.services.cache import cache_get, cache_set
 import logging
@@ -8,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def generate_qr_code(uuid: str) -> BytesIO:
+async def generate_qr_code(uuid: str) -> BufferedInputFile:
     """Generate QR code for file deep link with 7-day caching"""
     cache_key = f"qr:{uuid}"
     
@@ -16,10 +17,7 @@ async def generate_qr_code(uuid: str) -> BytesIO:
     cached = await cache_get(cache_key)
     if cached:
         logger.debug(f"QR cache hit for {uuid}")
-        buffer = BytesIO(cached)
-        buffer.name = 'qr_code.png'
-        buffer.seek(0)
-        return buffer
+        return BufferedInputFile(cached, filename="qr_code.png")
     
     # Generate QR
     deep_link = f"https://t.me/{settings.BOT_USERNAME}?start={uuid}"
@@ -45,8 +43,5 @@ async def generate_qr_code(uuid: str) -> BytesIO:
     
     logger.info(f"Generated QR code for {uuid}")
     
-    # Return buffer with name attribute
-    result_buffer = BytesIO(qr_bytes)
-    result_buffer.name = 'qr_code.png'
-    result_buffer.seek(0)
-    return result_buffer
+    # Return BufferedInputFile for aiogram v3
+    return BufferedInputFile(qr_bytes, filename="qr_code.png")
