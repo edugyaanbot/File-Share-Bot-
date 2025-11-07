@@ -66,22 +66,21 @@ async def handle_file_upload(message: Message, bot: Bot):
         uuid = file_doc["uuid"]
         deep_link = f"https://t.me/{settings.BOT_USERNAME}?start={uuid}"
         
-        # Delete processing message
-        await status_msg.delete()
+        # Generate QR code (returns BufferedInputFile)
+        qr_file = await generate_qr_code(uuid)
         
-        # Send success message with link
-        await message.answer(
+        # Update status message with success and link
+        await status_msg.edit_text(
             f"✅ <b>Stored Successfully!</b>\n\n"
             f"📎 Share this link:\n<code>{deep_link}</code>",
             reply_markup=get_file_link_keyboard(deep_link)
         )
         
-        # Generate and send QR with spoiler
-        qr_buffer = await generate_qr_code(uuid)
+        # Send QR with spoiler effect
         await bot.send_photo(
             chat_id=message.chat.id,
-            photo=qr_buffer,
-            caption="📱 Scan QR to retrieve file (tap to reveal)",
+            photo=qr_file,
+            caption="📱 <b>Scan QR to retrieve file</b>\n<i>(tap to reveal)</i>",
             has_spoiler=True,
             disable_notification=True
         )
@@ -89,8 +88,11 @@ async def handle_file_upload(message: Message, bot: Bot):
         logger.info(f"File {uuid} uploaded by user {user_id}")
         
     except Exception as e:
-        logger.error(f"Error storing file: {e}")
-        await status_msg.edit_text("❌ Error storing file. Please try again.")
+        logger.error(f"Error storing file: {e}", exc_info=True)
+        try:
+            await status_msg.edit_text("❌ Error storing file. Please try again.")
+        except:
+            await message.answer("❌ Error storing file. Please try again.")
 
 
 def extract_file_info(message: Message):
