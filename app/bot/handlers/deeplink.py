@@ -62,14 +62,14 @@ async def handle_deep_link(message: Message, bot: Bot):
         # Send action buttons
         deep_link = f"https://t.me/{settings.BOT_USERNAME}?start={uuid}"
         await message.answer(
-            "✅ File retrieved successfully!",
+            "✅ <b>File retrieved successfully!</b>",
             reply_markup=get_file_actions_keyboard(uuid, deep_link)
         )
         
         logger.info(f"File {uuid} served to user {message.from_user.id}")
         
     except Exception as e:
-        logger.error(f"Error copying file {uuid}: {e}")
+        logger.error(f"Error copying file {uuid}: {e}", exc_info=True)
         await message.answer("❌ Error retrieving file. It may have been deleted from storage.")
 
 
@@ -79,16 +79,16 @@ async def send_qr_again(callback: CallbackQuery, bot: Bot):
     uuid = callback.data.split(":")[2]
     
     try:
-        qr_buffer = await generate_qr_code(uuid)
+        qr_file = await generate_qr_code(uuid)
         
         await bot.send_photo(
             chat_id=callback.message.chat.id,
-            photo=qr_buffer,
-            caption="📱 Scan this QR code to access the file",
+            photo=qr_file,
+            caption="📱 <b>Scan this QR code to access the file</b>\n<i>(tap to reveal)</i>",
             has_spoiler=True
         )
         
-        await callback.answer("QR code sent!")
+        await callback.answer("✅ QR code sent!")
     except Exception as e:
-        logger.error(f"Error sending QR for {uuid}: {e}")
+        logger.error(f"Error sending QR for {uuid}: {e}", exc_info=True)
         await callback.answer("❌ Error generating QR code", show_alert=True)
