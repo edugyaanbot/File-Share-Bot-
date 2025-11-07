@@ -30,9 +30,10 @@ async def setup_bot():
     dp.message.middleware(AuthMiddleware())
     dp.message.middleware(RateLimitMiddleware())
     
-    # Register routers
-    dp.include_router(start.router)
-    dp.include_router(deeplink.router)
+    # Register routers - ORDER MATTERS!
+    # Deep link MUST be before regular start handler
+    dp.include_router(deeplink.router)  # First - handles /start with UUID
+    dp.include_router(start.router)     # Second - handles /start without UUID
     dp.include_router(upload.router)
     dp.include_router(myfiles.router)
     dp.include_router(admin.router)
