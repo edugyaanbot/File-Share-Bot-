@@ -68,38 +68,31 @@ async def handle_file_upload(message: Message, bot: Bot):
         # Delete processing message
         await status_msg.delete()
         
-        # Format: exactly like your reference
-        # Line 1: ✅ Stored!🔐
-        # Line 2: (empty)
-        # Line 3: Link : [clickable url with spoiler]
-        # Line 4: (empty)
-        # Line 5: FILE_UUID: [monospace uuid]
+        # STEP 1: Send QR code FIRST (at top)
+        qr_file = await generate_qr_code(uuid)
+        await bot.send_photo(
+            chat_id=message.chat.id,
+            photo=qr_file,
+            caption="",  # No caption on QR
+            has_spoiler=True,
+            disable_notification=True
+        )
         
-        success_text = (
+        # STEP 2: Send link and details BELOW QR
+        link_text = (
             "✅ <b>Stored!</b>🔐\n\n"
-            f"<b>Link :</b> <span class='tg-spoiler'>{deep_link}</span>\n\n"
+            f"<b>Link :</b> <a href='{deep_link}'>{deep_link}</a>\n\n"
             f"<b>FILE_UUID:</b> <code>{uuid}</code>"
         )
         
-        # Share File button at bottom
+        # Share File button
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔗 Share File", url=deep_link)]
         ])
         
         await message.answer(
-            success_text,
+            link_text,
             reply_markup=keyboard,
-            parse_mode="HTML"
-        )
-        
-        # Send QR code with spoiler
-        qr_file = await generate_qr_code(uuid)
-        await bot.send_photo(
-            chat_id=message.chat.id,
-            photo=qr_file,
-            caption="📱 <b>Scan QR to retrieve file</b>\n<i>(tap to reveal)</i>",
-            has_spoiler=True,
-            disable_notification=True,
             parse_mode="HTML"
         )
         
