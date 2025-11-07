@@ -11,6 +11,8 @@ logger = logging.getLogger(__name__)
 @router.message(CommandStart(deep_link=False))
 async def cmd_start(message: Message):
     """Handle /start command without deep link"""
+    logger.info(f"Regular /start from user {message.from_user.id}")
+    
     welcome_text = (
         "👋 <b>Welcome to File Share Bot!</b>\n\n"
         "📤 Send me any file, photo, video, voice, or document.\n"
@@ -22,7 +24,8 @@ async def cmd_start(message: Message):
     
     await message.answer(
         welcome_text,
-        reply_markup=get_main_menu()
+        reply_markup=get_main_menu(),
+        parse_mode="HTML"
     )
 
 
@@ -38,7 +41,7 @@ async def cmd_help(message: Message):
         "❓ /help - Show this message"
     )
     
-    await message.answer(help_text)
+    await message.answer(help_text, parse_mode="HTML")
 
 
 @router.message(F.text == "❓ Help")
@@ -51,6 +54,7 @@ async def help_button(message: Message):
 async def upload_button(message: Message):
     """Handle Upload button"""
     await message.answer(
-        "📤 Send me any file to upload!\n\n"
-        "Supported: Documents, Photos, Videos, Audio, Voice messages"
+        "📤 <b>Send me any file to upload!</b>\n\n"
+        "Supported: Documents, Photos, Videos, Audio, Voice messages",
+        parse_mode="HTML"
     )
